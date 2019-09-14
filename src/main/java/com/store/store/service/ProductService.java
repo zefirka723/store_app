@@ -2,11 +2,12 @@ package com.store.store.service;
 
 import com.store.store.entity.Product;
 import com.store.store.repository.ProductRepository;
+import com.store.store.specification.ProductSpecification;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -18,29 +19,40 @@ public class ProductService {
         this.productRepository = productRepository;
     }
 
-    @Value("${spring.data.rest.max-page-size}")
-    private int pageSize;
 
-    public Page<Product> getProductsByFiltres(Integer minCost, Integer maxCost, Integer pageNumber) {
-        if (pageNumber == null) {
-            pageNumber = 0;
+    public String getFiltresString(String word, Integer min, Integer max) {
+        StringBuilder filtersBuilder = new StringBuilder();
+        if (word != null && !word.isEmpty()) {
+            filtersBuilder.append("&word=" + word);
         }
-        if (minCost == null) {
-            minCost = 0;
+        if (min != null) {
+            filtersBuilder.append("&minCost=" + min);
         }
-        if (maxCost == null) {
-            maxCost = Integer.MAX_VALUE;
+        if (max != null) {
+            filtersBuilder.append("&maxCost=" + max);
         }
-        return productRepository.
-                findAllByCostBetween(
-                        minCost, maxCost,
-                        PageRequest.of(pageNumber, pageSize, new Sort(Sort.Direction.ASC, "id")));
+        return filtersBuilder.toString();
     }
 
 
-    public Long getTotalPagesCount() {
-        return productRepository.count() / pageSize;
+    public Specification<Product> getSpec(String word, Integer min, Integer max) {
+        Specification<Product> spec = Specification.where(null);
+        if (word != null && !word.isEmpty()) {
+            spec = spec.and(ProductSpecification.labelContains(word));
+        }
+        if (min != null) {
+            spec = spec.and(ProductSpecification.costGreaterThanOrEq(min));
+        }
+        if (max != null) {
+            spec = spec.and(ProductSpecification.costLesserThanOrEq(max));
+        }
+        return spec;
     }
+
+    public Page<Product> findAllByPagingAndFiltering(Specification<Product> specification, Pageable pageable) {
+        return productRepository.findAll(specification, pageable);
+    }
+
 
     public Product getOneById(Long id) {
         return productRepository.findById(id).orElseThrow(NullPointerException::new);
