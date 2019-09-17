@@ -1,6 +1,7 @@
 package com.store.store.service;
 
 import com.store.store.entity.Product;
+import com.store.store.error_handler.ResourceNotFoundException;
 import com.store.store.repository.ProductRepository;
 import com.store.store.specification.ProductSpecification;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,6 +10,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 @Service
 public class ProductService {
@@ -54,11 +57,31 @@ public class ProductService {
     }
 
 
-    public Product getOneById(Long id) {
-        return productRepository.findById(id).orElseThrow(NullPointerException::new);
-    }
+
 
     public void save(Product product) {
         productRepository.save(product);
+    }
+
+
+    // для реста
+    public Product saveOrUpdate(Product product) {
+        return productRepository.save(product);
+    }
+
+    public void delete(Long productId) {
+        productRepository.delete(productRepository
+                .findById(productId)
+                .orElseThrow(()-> new ResourceNotFoundException("Product with id = " + productId + " not found")));
+    }
+
+    public List<Product> getAllProducts() {
+        return (List)productRepository.findAll();
+    }
+
+    public Product getOneById(Long id) {
+        return productRepository
+                .findById(id)
+                .orElseThrow(()-> new ResourceNotFoundException("Product with id = " + id + " not found"));
     }
 }
